@@ -1,42 +1,78 @@
 
 # Rapport
 
-**Skriv din rapport här!**
+Applikationens uppgift är att skapa en databas i SQLite där data kan skrivas och läsas. 
 
-_Du kan ta bort all text som finns sedan tidigare_.
-
-## Följande grundsyn gäller dugga-svar:
-
-- Ett kortfattat svar är att föredra. Svar som är längre än en sida text (skärmdumpar och programkod exkluderat) är onödigt långt.
-- Svaret skall ha minst en snutt programkod.
-- Svaret skall inkludera en kort övergripande förklarande text som redogör för vad respektive snutt programkod gör eller som svarar på annan teorifråga.
-- Svaret skall ha minst en skärmdump. Skärmdumpar skall illustrera exekvering av relevant programkod. Eventuell text i skärmdumpar måste vara läsbar.
-- I de fall detta efterfrågas, dela upp delar av ditt svar i för- och nackdelar. Dina för- respektive nackdelar skall vara i form av punktlistor med kortare stycken (3-4 meningar).
-
-Programkod ska se ut som exemplet nedan. Koden måste vara korrekt indenterad då den blir lättare att läsa vilket gör det lättare att hitta syntaktiska fel.
-
+Här skapas databasen. I `DATABASE_CREATE` skapas SQL-queryn för att skapa databasen.  
 ```
-function errorCallback(error) {
-    switch(error.code) {
-        case error.PERMISSION_DENIED:
-            // Geolocation API stöds inte, gör något
-            break;
-        case error.POSITION_UNAVAILABLE:
-            // Misslyckat positionsanrop, gör något
-            break;
-        case error.UNKNOWN_ERROR:
-            // Okänt fel, gör något
-            break;
+public class DatabaseHelper extends SQLiteOpenHelper {
+    private static final String DATABASE_CREATE = "create table MyTable ( _id integer primary key autoincrement, column1 text not null, column2 text not null, column3 text not null);";
+
+    @Override
+    public void onCreate(SQLiteDatabase database) {
+        database.execSQL(DATABASE_CREATE);
     }
 }
 ```
 
-Bilder läggs i samma mapp som markdown-filen.
+Texten hämtas från EditText och skriver texten till databasen, förutsatt att texten är "Mountains". ContentValues används för att lagra våra värden.
+```
+private void writeToDatabase() {
+    String value1 = editText1.getText().toString();
+    // Avoid writing "Mountains" to the database
+    if(!value1.equalsIgnoreCase("Mountains")) {
+        ContentValues values = new ContentValues();
+        values.put("column1", value1);
 
-![](android.png)
+        database.insert("MyTable", null, values);
+    }
+}
+```
 
-Läs gärna:
+Methoden läser in alla rader från databastabellen.En query ställer en fråga till databasen, och tillbaka en kommer en `Cursor som representerar resultaten.
+```
+private void readFromDatabase() {
+    Cursor cursor = null;
+    try {
+        cursor = database.query("MyTable", new String[]{"column1", "column2", "column3"}, null, null, null, null, null);
+        StringBuilder builder = new StringBuilder();
 
-- Boulos, M.N.K., Warren, J., Gong, J. & Yue, P. (2010) Web GIS in practice VIII: HTML5 and the canvas element for interactive online mapping. International journal of health geographics 9, 14. Shin, Y. &
-- Wunsche, B.C. (2013) A smartphone-based golf simulation exercise game for supporting arthritis patients. 2013 28th International Conference of Image and Vision Computing New Zealand (IVCNZ), IEEE, pp. 459–464.
-- Wohlin, C., Runeson, P., Höst, M., Ohlsson, M.C., Regnell, B., Wesslén, A. (2012) Experimentation in Software Engineering, Berlin, Heidelberg: Springer Berlin Heidelberg.
+        while (cursor.moveToNext()) {
+            builder.append(cursor.getString(0));
+            builder.append(" ");
+            builder.append(cursor.getString(1));
+            builder.append(" ");
+            builder.append(cursor.getString(2));
+            builder.append("\n");
+        }
+
+        textView.setText(builder.toString());
+    } catch (SQLiteException e) {
+        e.printStackTrace();
+    } finally {
+        if (cursor != null) {
+            cursor.close();
+        }
+    }
+}
+```
+
+Tömmer databasen på all data som existerar.
+```
+private void clearDatabase() {
+    database.delete("MyTable", null, null);
+    textView.setText("");
+}
+```
+
+Stänger DatabaseHelper när aktiviteten förstörs.
+```
+@Override
+protected void onDestroy() {
+    dbHelper.close();
+    super.onDestroy();
+}
+```
+
+Resultat:
+![](a22hanfa_base.png)![](a22hanfa_data_written.png)![](a22hanfa_input.png)
